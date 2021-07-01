@@ -18,12 +18,16 @@ namespace AutoFixture.Idioms
 
         public FieldAccess<string>[] StringFields => allFields.OfType<FieldAccess<string>>().ToArray();
 
+        public object Instance { get; }
+
         public ReflectionScaffolding(Type type, object instance) : this(type, instance, new HashSet<object>(EqualityComparer<object>.Default)) { }
 
         public ReflectionScaffolding(Type type, object instance, HashSet<object> cycleBreaker)
         {
-            this.type = type;
+            cycleBreaker.Add(instance);
 
+            this.type = type;
+            this.Instance = instance;
             var fields = type.GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.FlattenHierarchy);
             foreach (var field in fields)
             {
@@ -55,9 +59,8 @@ namespace AutoFixture.Idioms
             {
                 return;
             }
-            cycleBreaker.Add(nestedInstance);
 
-            allFields.AddRange(new ReflectionScaffolding(fieldInfo.FieldType, nestedInstance).allFields);
+            allFields.AddRange(new ReflectionScaffolding(fieldInfo.FieldType, nestedInstance, cycleBreaker).allFields);
         }
 
         public ReflectionScaffolding Clone()
@@ -90,6 +93,8 @@ namespace AutoFixture.Idioms
 
             private readonly object instance;
 
+            public string Name => fieldInfo.Name;
+
             public FieldAccess(FieldInfo fieldInfo, object instance)
             {
                 this.fieldInfo = fieldInfo;
@@ -102,6 +107,8 @@ namespace AutoFixture.Idioms
             {
                 fieldInfo.SetValue(instance, value);
             }
+
+            public override string ToString() => $"{Name}: {GetObject()}";
         }
 
     }
